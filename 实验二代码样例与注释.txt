@@ -1,0 +1,309 @@
+// Ciallo～(∠・ω< )⌒★
+
+//实验二 第一关
+//二分查找时间复杂度为O(log n)，前提是数据集有序
+//除此之外，二分查找有几种写法，区别是while条件中是否为小于等于，mid是否需要加上1或是减去1，建议选择一种正确的然后搞懂
+//https://blog.csdn.net/weixin_45727931/article/details/115276255 具体细节，感兴趣可以查看
+
+int binary_search(PseqList& L, char* x) {
+    // 在有序顺序表L中查找与x相同的课程名称的课程信息，若不存在给定值，则返回0
+
+    int low = 0, high = L->curNum - 1, mid = 0; // 初始化低位、高位和中位索引
+
+    while (low <= high) {
+        mid = (high + low) / 2; // 计算中位索引
+
+        printf("%s\n", L->element[mid].coursename); // 输出当前比较的课程名称
+
+        if (strcmp(L->element[mid].coursename, x) > 0)
+        {
+            // 如果当前中位元素的课程名称比x大，说明x可能在左半部分
+            high = mid - 1; // 更新高位索引
+        }
+        else if (strcmp(L->element[mid].coursename, x) < 0)
+        {
+            // 如果当前中位元素的课程名称比x小，说明x可能在右半部分
+            low = mid + 1; // 更新低位索引
+        }
+        else
+        {
+            // 找到了与x相同的课程名称，返回中位索引
+            return mid;
+        }
+    }
+
+    // 如果循环结束仍未找到与x相同的课程名称，返回0表示未找到
+    return 0;
+}
+
+
+//实验二 第二关
+//buildBST函数通过递归的方式构建二叉排序树，首先是创建，然后是查找
+
+// 定义树节点结构
+typedef struct TreeNode {
+    DataType data;            // 存储的数据
+    struct TreeNode* left;    // 左子树指针
+    struct TreeNode* right;   // 右子树指针
+} TreeNode;
+//insert函数用于将数据插入二叉排序树
+TreeNode* insert(TreeNode* root, DataType data) {
+    if (root == NULL) {
+        // 如果根节点为空，创建新节点并初始化
+        TreeNode* newNode = (TreeNode*)malloc(sizeof(TreeNode));
+        newNode->data = data;
+        newNode->left = newNode->right = NULL;
+        return newNode;
+    }
+
+    int cmp = strcmp(data.coursename, root->data.coursename);
+
+    // 输出每次比较的课程名称
+    printf("%s\n", root->data.coursename);
+
+    if (cmp < 0) {
+        // 如果新数据的课程名称小于当前节点的课程名称，向左子树插入
+        root->left = insert(root->left, data);
+    }
+    else if (cmp > 0) {
+        // 否则，向右子树插入
+        root->right = insert(root->right, data);
+    }
+
+    return root;
+}
+
+// 将顺序表数据放入二叉排序树
+void buildBST(PseqList L, TreeNode** root) {
+    for (int i = 0; i < L->curNum; i++) {
+        *root = insert(*root, L->element[i]);
+    }
+}
+
+// 二叉排序树中查找指定的课程名称 x
+int biTree_search(PseqList& L, char* x) {
+    TreeNode* root = NULL; // 在函数内创建 root 节点
+    buildBST(L, &root);
+
+    int cmp;
+    TreeNode* current = root; // current为当前结点
+    while (current != NULL) {
+        cmp = strcmp(x, current->data.coursename); //strcmp函数，用于比较字符串，注意返回的不一定是0或-1或1，而是等于0，小于0，大于零，具体用法 https://www.runoob.com/cprogramming/c-function-strcmp.html
+
+        // 输出每次比较的课程名称
+        printf("%s\n", current->data.coursename);
+
+        if (cmp == 0) {
+            free(root); // 释放分配的内存
+            return 1; // 找到匹配的课程名称
+        }
+        else if (cmp < 0) {
+            current = current->left;
+        }
+        else {
+            current = current->right;
+        }
+    }
+
+    free(root); // 释放分配的内存
+    return 0; // 未找到，返回0
+}
+
+
+//实验二 第三关
+#define HASH_SIZE 1000 // 假定散列表大小为1000
+
+// 定义散列表的元素结构
+typedef struct {
+    DataType data; // 课程信息
+    int used;      // 标志位，表示该槽是否被使用
+} HashElement;
+
+// 定义散列表结构
+typedef struct {
+    HashElement table[HASH_SIZE]; // 散列表数组
+} HashTable;
+
+// 初始化散列表
+void initHashTable(HashTable* table) {
+    for (int i = 0; i < HASH_SIZE; i++) {
+        table->table[i].used = 0; // 初始化标志位为0，表示槽未被使用
+    }
+}
+
+// 计算散列值
+int hashFunction(char* key) {
+    
+    //自己设计一个散列函数，散列函数最好能充分利用空间
+    int hash = 0;
+    //这里用的是字符串的ASCII加和
+    for (int i = 0; key[i] != '\0'; i++) {
+        hash += key[i];
+    }
+    return hash;
+}
+
+// 插入元素到散列表
+int insertElement(HashTable* table, DataType data) {
+    int index = hashFunction(data.coursename);
+
+    while (table->table[index].used) {
+        // 采用开放地址法解决冲突
+        index = (index + 1) % HASH_SIZE;
+    }
+
+    // 在找到空槽后，插入元素
+    table->table[index].data = data;
+    table->table[index].used = 1; // 标志位设置为1，表示该槽被使用
+
+    return index; // 返回插入的位置索引
+}
+
+// 查找元素在散列表中的位置
+int findElement(HashTable* table, char* key) {
+    int index = hashFunction(key);
+
+    while (table->table[index].used) {
+        // 在查找时输出每次比较的数据元素对应的课程名称
+        printf("%s\n", table->table[index].data.coursename);
+
+        if (strcmp(key, table->table[index].data.coursename) == 0) {
+            // 找到匹配的元素
+            return index;
+        }
+
+        index = (index + 1) % HASH_SIZE;
+    }
+
+    // 未找到
+    return -1;
+}
+
+// 散列查找函数
+int hash_search_open(PseqList& L, char* x) {
+    HashTable table;
+    initHashTable(&table);
+
+    // 插入线性表数据到散列表
+    for (int i = 0; i < L->curNum; i++) {
+        insertElement(&table, L->element[i]);
+    }
+
+    // 在散列表中查找 x
+    int result = findElement(&table, x);
+
+    if (result != -1) {
+        printf("%d\n", result);
+    }
+    else {
+        printf("Not found\n");
+    }
+
+    return result;
+}
+
+
+//实验二 第四关
+//思路与第三关相同，只不过当冲突时创建新节点来处理
+#define HASH_SIZE 1000 // 假定散列表大小为1000
+
+// 定义链表节点结构
+typedef struct ListNode {
+    DataType data; // 课程信息
+    struct ListNode* next; // 指向下一个节点的指针
+} ListNode;
+
+// 定义散列表的元素结构，包括链表头
+typedef struct HashElement {
+    ListNode* head; // 链表头
+} HashElement;
+
+// 定义散列表结构
+typedef struct {
+    HashElement table[HASH_SIZE]; // 散列表数组
+} HashTable;
+
+// 初始化散列表
+void initHashTable(HashTable* table) {
+    for (int i = 0; i < HASH_SIZE; i++) {
+        table->table[i].head = NULL; // 初始化链表头为空
+    }
+}
+
+// 计算散列值
+int hashFunction(char* key) {
+    int hash = 0;
+    // 这里使用字符串的ASCII码值相加
+    for (int i = 0; key[i] != '\0'; i++) {
+        hash += key[i];
+    }
+    return hash % HASH_SIZE; // 对散列值进行模运算以适应散列表大小
+}
+
+// 插入元素到散列表
+void insertElement(HashTable* table, DataType data) {
+    int index = hashFunction(data.coursename);
+
+    ListNode* newNode = (ListNode*)malloc(sizeof(ListNode));
+    newNode->data = data;
+    newNode->next = NULL;
+
+    if (table->table[index].head == NULL) {
+        table->table[index].head = newNode;
+    }
+    else // 采用链式地址法处理冲突
+    {
+        // 链表不为空，将新节点插入到链表末尾
+        ListNode* current = table->table[index].head;
+        while (current->next != NULL) {
+            current = current->next;
+        }
+        current->next = newNode;
+    }
+}
+
+// 查找元素在散列表中的位置
+int findElement(HashTable* table, char* key) {
+    int index = hashFunction(key);
+    int position = 0;
+
+    ListNode* current = table->table[index].head;
+    while (current != NULL) {
+        // 输出每次比较的数据元素对应的课程名称
+        printf("%s\n", current->data.coursename);
+
+        if (strcmp(key, current->data.coursename) == 0) {
+            // 找到匹配的元素
+            return position;
+        }
+
+        current = current->next;
+        position++;
+    }
+
+    // 未找到
+    return -1;
+}
+
+// 散列查找函数
+int hash_search_link(PseqList* L, char* x) {
+    HashTable table;
+    initHashTable(&table);
+
+    // 插入线性表数据到散列表
+    for (int i = 0; i < L->curNum; i++) {
+        insertElement(&table, L->element[i]);
+    }
+
+    // 在散列表中查找 x
+    int result = findElement(&table, x);
+
+    if (result != -1) {
+        printf("%d\n", result);
+    }
+    else {
+        printf("Not found\n");
+    }
+
+    return result;
+}
